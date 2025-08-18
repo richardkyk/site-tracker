@@ -1,0 +1,21 @@
+# Terraform state files
+infra/terraform.tfstate
+infra/terraform.tfstate.backup
+infra/terraform.tfstate.*
+
+# Crash logs
+infra/crash.log
+
+# Terraform variable overrides
+infra/*.tfvars
+
+# .terraform working directory
+infra/.terraform/
+infra/.terraform.lock.hcl
+
+# Terraform plan files
+infra/*.tfplan
+
+# local_exec temp files (optional if you generate any)
+infra/*.log
+infra/tmp/
