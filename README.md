@@ -1,6 +1,6 @@
-# Price Tracker
+# Site Tracker
 
-A serverless application that retrieves the price of a product from a website.
+A serverless application that notifies you when a specific value has changed on a website.
 
 ## Usage
 
@@ -8,22 +8,70 @@ To use this application, you need to provide the following parameters:
 
 - `url`: The URL of the website to scrape.
 - `selector`: The CSS selector to use to narrow down the elements to scrape.
-- `regex`: The regular expression to use to extract the price.
+- `regex`: The regular expression to use to extract the value. This should include capture groups to extract the value.
+- `expected`: The expected value. This would be the current price of a product, for example.
+- `email`: The email address to send the notification to.
+
+### Price Tracking
 
 For example, if you want to scrape the price of a product from a website, you can use the following command:
 
-```bash
-curl "https://[xxxxx].execute-api.ap-southeast-2.amazonaws.com/?url=https%3A%2F%2Fexample.com&selector=p&regex=%28.*%3F%29%5C."
+```javascript
+const url = "https://[xxxxx].execute-api.ap-southeast-2.amazonaws.com/"
+// create the resource and store it in dynamoDB
+const id = await fetch(url, {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        url: "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html"",
+        selector: "div.product_main p.price_color",
+        regex: "(\\d+\\.\\d+)",
+        expected: "53.74", 
+        email: "example@example.com"
+    })
+})
+
+// returns the extracted value
+const value = await fetch(`${url}?id=${id})
+
 ```
 
 This will return the price of the product as a plain text response.
+
+### Keyword Tracking
+
+For example, if you want to be notified when the keywords from a website suddenly appear:
+
+```javascript
+const url = "https://[xxxxx].execute-api.ap-southeast-2.amazonaws.com/"
+// create the resource and store it in dynamoDB
+const id = await fetch(url, {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        url: "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html"",
+        selector: "body",
+        regex: "(?i)(sale|discount)",
+        expected: "", 
+        email: "example@example.com"
+    })
+})
+
+const value = await fetch(`${url}?id=${id})
+```
+
+This will return the extracted value as a plain text response.
 
 ## Building
 
 To build this application, you can use the following command:
 
 ```bash
-docker buildx build --platform linux/arm64 --provenance=false -t lambda:price-tracker .
+docker buildx build --platform linux/arm64 --provenance=false -t lambda:site-tracker .
 ```
 This will build a minimal Docker image for the application using the AWS Lambda runtime.
 
@@ -32,7 +80,7 @@ This will build a minimal Docker image for the application using the AWS Lambda 
 To deploy this application locally, you can use the following command:
 
 ```bash
-docker run -p 9000:8080 --entrypoint /usr/local/bin/aws-lambda-rie lambda:price-tracker /var/task/bootstrap
+docker run -p 9000:8080 --entrypoint /usr/local/bin/aws-lambda-rie lambda:site-tracker /var/task/bootstrap
 ```
 
 This will start a local server that listens on port 9000 and serves the application.

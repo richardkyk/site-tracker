@@ -1,4 +1,4 @@
-module price-tracker
+module site-tracker
 
 go 1.24.2
 
