@@ -17,24 +17,26 @@ To use this application, you need to provide the following parameters:
 For example, if you want to scrape the price of a product from a website, you can use the following command:
 
 ```javascript
-const url = "https://[xxxxx].execute-api.ap-southeast-2.amazonaws.com/"
+const url = "https://[xxxxx].execute-api.[region].amazonaws.com/"
 // create the resource and store it in dynamoDB
-const id = await fetch(url, {
+const res = await fetch(url, {
     method: "POST",
     headers: {
         "Content-Type": "application/json"
     },
     body: JSON.stringify({
-        url: "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html"",
+        url: "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html",
         selector: "div.product_main p.price_color",
         regex: "(\\d+\\.\\d+)",
         expected: "53.74", 
         email: "example@example.com"
     })
 })
+const id = await res.text()
 
 // returns the extracted value
-const value = await fetch(`${url}?id=${id})
+const res2 = await fetch(`${url}?id=${id})
+const value = await res2.text()
 
 ```
 
@@ -45,23 +47,25 @@ This will return the price of the product as a plain text response.
 For example, if you want to be notified when the keywords from a website suddenly appear:
 
 ```javascript
-const url = "https://[xxxxx].execute-api.ap-southeast-2.amazonaws.com/"
+const url = "https://[xxxxx].execute-api.[region].amazonaws.com/"
 // create the resource and store it in dynamoDB
-const id = await fetch(url, {
+const res = await fetch(url, {
     method: "POST",
     headers: {
         "Content-Type": "application/json"
     },
     body: JSON.stringify({
-        url: "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html"",
+        url: "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html",
         selector: "body",
         regex: "(?i)(sale|discount)",
         expected: "", 
         email: "example@example.com"
     })
 })
+const id = await res.text()
 
-const value = await fetch(`${url}?id=${id})
+const res2 = await fetch(`${url}?id=${id})
+const value = await res2.text()
 ```
 
 This will return the extracted value as a plain text response.
