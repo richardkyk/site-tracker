@@ -34,27 +34,28 @@ func init() {
 	sqsClient = sqs.NewFromConfig(cfg)
 }
 
-func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handler(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	response := ""
 	var err error
-	fmt.Println(request.HTTPMethod)
-	switch request.HTTPMethod {
+	method := event.RequestContext.HTTP.Method
+	fmt.Println(method)
+	switch method {
 	case "GET":
-		response, err = get(ctx, request)
+		response, err = get(ctx, event)
 	case "POST":
-		response, err = post(ctx, request)
+		response, err = post(ctx, event)
 	default:
 		err = fmt.Errorf("Invalid method")
 	}
 
 	if err != nil {
-		return events.APIGatewayProxyResponse{
+		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 400,
 			Body:       err.Error(),
 		}, nil
 	}
 
-	return events.APIGatewayProxyResponse{
+	return events.APIGatewayV2HTTPResponse{
 		StatusCode:      200,
 		Headers:         map[string]string{"Content-Type": "text/plain; charset=utf-8"},
 		Body:            response,
@@ -71,8 +72,8 @@ type Event struct {
 	ID string `json:"id"`
 }
 
-func get(ctx context.Context, request events.APIGatewayProxyRequest) (string, error) {
-	id := request.QueryStringParameters["id"]
+func get(ctx context.Context, event events.APIGatewayV2HTTPRequest) (string, error) {
+	id := event.QueryStringParameters["id"]
 	if id == "" {
 		return "", fmt.Errorf("id is required")
 	}
@@ -101,23 +102,23 @@ func get(ctx context.Context, request events.APIGatewayProxyRequest) (string, er
 	url := item["url"]
 	selector := item["selector"]
 	regex := item["regex"]
-	price := item["price"]
+	expected := item["expected"]
 	email := item["email"]
 
-	extractedPrice := ""
-	priceRegex := regexp.MustCompile(regex)
+	extractedValue := ""
+	valueRegex := regexp.MustCompile(regex)
 
 	c.OnHTML(selector, func(e *colly.HTMLElement) {
 		text := e.Text
-		match := priceRegex.FindStringSubmatch(text)
-		extractedPrice = "N/A"
+		match := valueRegex.FindStringSubmatch(text)
+		extractedValue = "N/A"
 		if len(match) > 1 {
-			extractedPrice = match[1]
+			extractedValue = match[1]
 		}
-		if extractedPrice != "N/A" && extractedPrice != price {
+		if extractedValue != "N/A" && extractedValue != expected {
 			payload := map[string]string{
 				"email":   email,
-				"message": fmt.Sprintf("Price changed from %s to %s", price, extractedPrice),
+				"message": fmt.Sprintf("Value changed from %s to %s", expected, extractedValue),
 			}
 			payloadBytes, err := json.Marshal(payload)
 			if err != nil {
@@ -140,12 +141,12 @@ func get(ctx context.Context, request events.APIGatewayProxyRequest) (string, er
 
 	c.OnError(func(r *colly.Response, err error) {
 		log.Printf("Request failed: %s %d %v", r.Request.URL, r.StatusCode, err)
-		price = fmt.Sprintf("Error: %s", err.Error())
+		extractedValue = fmt.Sprintf("Error: %s", err.Error())
 	})
 
 	c.Visit(url)
-	log.Printf("price: %s", price)
-	return price, nil
+	log.Printf("value: %s", extractedValue)
+	return extractedValue, nil
 
 }
 
@@ -153,15 +154,14 @@ type RequestBody struct {
 	URL      string `json:"url"`
 	Selector string `json:"selector"`
 	Regex    string `json:"regex"`
-	Value    string `json:"value"`
+	Expected string `json:"expected"`
 	Email    string `json:"email"`
-	Price    string `json:"price"`
 }
 
-func post(ctx context.Context, request events.APIGatewayProxyRequest) (string, error) {
+func post(ctx context.Context, event events.APIGatewayV2HTTPRequest) (string, error) {
 	// Parse POST body
 	var body RequestBody
-	err := json.Unmarshal([]byte(request.Body), &body)
+	err := json.Unmarshal([]byte(event.Body), &body)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse body: %w", err)
 	}
@@ -189,8 +189,8 @@ func post(ctx context.Context, request events.APIGatewayProxyRequest) (string, e
 			"url":      &types.AttributeValueMemberS{Value: body.URL},
 			"selector": &types.AttributeValueMemberS{Value: body.Selector},
 			"regex":    &types.AttributeValueMemberS{Value: body.Regex},
+			"expected": &types.AttributeValueMemberS{Value: body.Expected},
 			"email":    &types.AttributeValueMemberS{Value: body.Email},
-			"price":    &types.AttributeValueMemberS{Value: body.Price},
 		},
 	})
 	if err != nil {
