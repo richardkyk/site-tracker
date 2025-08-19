@@ -9,7 +9,7 @@ terraform {
 }
 
 locals {
-  image_tag = "v3"
+  image_tag = "v4"
 }
 
 # Create ECR repository to hold your Docker image
@@ -71,6 +71,7 @@ resource "aws_lambda_function" "lambda" {
   environment {
     variables = {
       DYNAMODB_TABLE = aws_dynamodb_table.dynamodb_table.name
+      SQS_URL        = aws_sqs_queue.email_queue.id
     }
   }
 }
@@ -86,10 +87,8 @@ resource "aws_dynamodb_table" "dynamodb_table" {
   }
 }
 
-resource "aws_iam_policy" "lambda_dynamodb" {
-  name        = "${var.app_name}-lambda-dynamodb-policy"
-  description = "Allow Lambda to read/write to DynamoDB table"
-
+resource "aws_iam_role_policy" "lambda_dynamodb" {
+  role = aws_iam_role.lambda_exec.id
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -103,14 +102,9 @@ resource "aws_iam_policy" "lambda_dynamodb" {
         ],
         Effect   = "Allow",
         Resource = aws_dynamodb_table.dynamodb_table.arn
-      }
+      },
     ]
   })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_dynamodb_attach" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = aws_iam_policy.lambda_dynamodb.arn
 }
 
 resource "aws_api_gateway_rest_api" "api" {
@@ -118,23 +112,17 @@ resource "aws_api_gateway_rest_api" "api" {
   description = "REST API for Lambda proxy integration"
 }
 
-resource "aws_api_gateway_resource" "api_proxy" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
-  path_part   = "{proxy+}"
-}
-
-resource "aws_api_gateway_method" "any_method" {
+resource "aws_api_gateway_method" "method" {
   rest_api_id   = aws_api_gateway_rest_api.api.id
-  resource_id   = aws_api_gateway_resource.api_proxy.id
+  resource_id   = aws_api_gateway_rest_api.api.root_resource_id
   http_method   = "ANY"
   authorization = "NONE"
 }
 
 resource "aws_api_gateway_integration" "lambda_proxy" {
   rest_api_id             = aws_api_gateway_rest_api.api.id
-  resource_id             = aws_api_gateway_resource.api_proxy.id
-  http_method             = aws_api_gateway_method.any_method.http_method
+  resource_id             = aws_api_gateway_rest_api.api.root_resource_id
+  http_method             = aws_api_gateway_method.method.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.lambda.invoke_arn
@@ -159,8 +147,28 @@ resource "aws_api_gateway_deployment" "deployment" {
   rest_api_id = aws_api_gateway_rest_api.api.id
 }
 
-
 output "api_url" {
   value = "https://${aws_api_gateway_rest_api.api.id}.execute-api.${var.aws_region}.amazonaws.com/prod"
 }
 
+resource "aws_sqs_queue" "email_queue" {
+  name = "${var.app_name}-email-queue"
+}
+
+resource "aws_iam_role_policy" "lambda_sqs" {
+  role = aws_iam_role.lambda_exec.id
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = ["sqs:SendMessage"],
+        Resource = aws_sqs_queue.email_queue.arn
+      }
+    ]
+  })
+}
+
+output "sqs_url" {
+  value = aws_sqs_queue.email_queue.id
+}

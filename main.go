@@ -14,12 +14,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/gocolly/colly/v2"
 	"github.com/google/uuid"
 )
 
 var (
 	dynamoDBClient *dynamodb.Client
+	sqsClient      *sqs.Client
 )
 
 func init() {
@@ -29,6 +31,7 @@ func init() {
 		log.Fatalf("unable to load SDK config, %v", err)
 	}
 	dynamoDBClient = dynamodb.NewFromConfig(cfg)
+	sqsClient = sqs.NewFromConfig(cfg)
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -69,7 +72,6 @@ type Event struct {
 }
 
 func get(ctx context.Context, request events.APIGatewayProxyRequest) (string, error) {
-	tableName := os.Getenv("DYNAMODB_TABLE")
 	id := request.QueryStringParameters["id"]
 	if id == "" {
 		return "", fmt.Errorf("id is required")
@@ -77,7 +79,7 @@ func get(ctx context.Context, request events.APIGatewayProxyRequest) (string, er
 
 	// Get item from DynamoDB
 	out, err := dynamoDBClient.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(tableName),
+		TableName: aws.String(os.Getenv("DYNAMODB_TABLE")),
 		Key: map[string]types.AttributeValue{
 			"id": &types.AttributeValueMemberS{Value: id},
 		},
@@ -99,16 +101,36 @@ func get(ctx context.Context, request events.APIGatewayProxyRequest) (string, er
 	url := item["url"]
 	selector := item["selector"]
 	regex := item["regex"]
+	price := item["price"]
+	email := item["email"]
 
-	price := ""
+	extractedPrice := ""
 	priceRegex := regexp.MustCompile(regex)
 
 	c.OnHTML(selector, func(e *colly.HTMLElement) {
 		text := e.Text
 		match := priceRegex.FindStringSubmatch(text)
-		price = "N/A"
+		extractedPrice = "N/A"
 		if len(match) > 1 {
-			price = match[1]
+			extractedPrice = match[1]
+		}
+		if extractedPrice != "N/A" && extractedPrice != price {
+			payload := map[string]string{
+				"email":   email,
+				"message": fmt.Sprintf("Price changed from %s to %s", price, extractedPrice),
+			}
+			payloadBytes, err := json.Marshal(payload)
+			if err != nil {
+				log.Printf("failed to marshal payload, %v", err)
+				return
+			}
+			_, err = sqsClient.SendMessage(ctx, &sqs.SendMessageInput{
+				QueueUrl:    aws.String(os.Getenv("SQS_URL")),
+				MessageBody: aws.String(string(payloadBytes)),
+			})
+			if err != nil {
+				log.Printf("failed to send message to SQS queue, %v", err)
+			}
 		}
 	})
 
@@ -131,6 +153,9 @@ type RequestBody struct {
 	URL      string `json:"url"`
 	Selector string `json:"selector"`
 	Regex    string `json:"regex"`
+	Value    string `json:"value"`
+	Email    string `json:"email"`
+	Price    string `json:"price"`
 }
 
 func post(ctx context.Context, request events.APIGatewayProxyRequest) (string, error) {
@@ -164,6 +189,8 @@ func post(ctx context.Context, request events.APIGatewayProxyRequest) (string, e
 			"url":      &types.AttributeValueMemberS{Value: body.URL},
 			"selector": &types.AttributeValueMemberS{Value: body.Selector},
 			"regex":    &types.AttributeValueMemberS{Value: body.Regex},
+			"email":    &types.AttributeValueMemberS{Value: body.Email},
+			"price":    &types.AttributeValueMemberS{Value: body.Price},
 		},
 	})
 	if err != nil {
