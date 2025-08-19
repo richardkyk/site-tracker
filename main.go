@@ -44,6 +44,16 @@ func handler(ctx context.Context, event events.APIGatewayV2HTTPRequest) (events.
 		response, err = get(ctx, event)
 	case "POST":
 		response, err = post(ctx, event)
+	case "OPTIONS":
+		// Respond to preflight request
+		return events.APIGatewayV2HTTPResponse{
+			StatusCode: 204,
+			Headers: map[string]string{
+				"Access-Control-Allow-Origin":  "*",
+				"Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+				"Access-Control-Allow-Headers": "*",
+			},
+		}, nil
 	default:
 		err = fmt.Errorf("Invalid method")
 	}

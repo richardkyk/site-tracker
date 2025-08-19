@@ -9,7 +9,7 @@ terraform {
 }
 
 locals {
-  image_tag = "v6"
+  image_tag = "v1"
 }
 
 # Create ECR repository to hold your Docker image
@@ -110,6 +110,13 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 resource "aws_apigatewayv2_api" "http_api" {
   name          = "${var.app_name}-http-api"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["*"] # or ["*"] for any
+    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_headers = ["*"]
+    max_age       = 3600
+  }
 }
 
 resource "aws_apigatewayv2_integration" "lambda_integration" {
@@ -162,6 +169,3 @@ resource "aws_iam_role_policy" "lambda_sqs" {
   })
 }
 
-output "sqs_url" {
-  value = aws_sqs_queue.email_queue.id
-}
