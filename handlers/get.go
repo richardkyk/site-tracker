@@ -7,6 +7,7 @@ import (
 	"log"
 	"regexp"
 	"site-tracker/clients"
+	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/gocolly/colly/v2"
@@ -52,7 +53,7 @@ func HandleGet(ctx context.Context, request events.APIGatewayV2HTTPRequest) (eve
 		}
 
 		if extractedValue != "N/A" && extractedValue != site.Expected {
-			extractedValue = fmt.Sprintf(`Value changed from "%q" to "%q"`, site.Expected, extractedValue)
+			extractedValue = fmt.Sprintf(`Value changed from %s to %s`, strconv.Quote(site.Expected), strconv.Quote(extractedValue))
 			payload := map[string]string{
 				"email":   site.Email,
 				"url":     site.URL,
