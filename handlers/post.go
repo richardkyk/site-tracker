@@ -14,7 +14,7 @@ type PostRequestBody struct {
 	URL      string `json:"url" validate:"required,url"`
 	Selector string `json:"selector" validate:"required"`
 	Regex    string `json:"regex" validate:"required"`
-	Expected string `json:"expected" validate:"required"`
+	Expected string `json:"expected"`
 	Email    string `json:"email" validate:"required,email"`
 }
 
