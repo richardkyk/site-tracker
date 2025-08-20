@@ -40,7 +40,7 @@ func HandleGet(ctx context.Context, request events.APIGatewayV2HTTPRequest) (eve
 
 	c := colly.NewCollector()
 
-	extractedValue := ""
+	extractedValue := "selector not found"
 
 	c.OnHTML(site.Selector, func(e *colly.HTMLElement) {
 		text := e.Text
@@ -79,7 +79,7 @@ func HandleGet(ctx context.Context, request events.APIGatewayV2HTTPRequest) (eve
 
 	c.OnError(func(r *colly.Response, err error) {
 		log.Printf("request failed: %s %d %v", r.Request.URL, r.StatusCode, err)
-		extractedValue = fmt.Sprintf("Error: %s", err.Error())
+		extractedValue = fmt.Sprintf("error: %s", err.Error())
 	})
 
 	c.Visit(site.URL)
