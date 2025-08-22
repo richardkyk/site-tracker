@@ -36,9 +36,16 @@ variable "dynamodb_arns" {
   default = [] # <- default empty list
 }
 
-variable "sqs_arns" {
-  type    = list(string)
-  default = [] # <- default empty list
+variable "sqs_target_arns" {
+  type        = list(string)
+  description = "List of SQS queue ARNs to allow sending messages to"
+  default     = [] # <- default empty list
+}
+
+variable "sqs_trigger_arns" {
+  type        = list(string)
+  description = "List of SQS queue ARNs to allow triggering the Lambda"
+  default     = [] # <- default empty list
 }
 
 variable "allowed_methods" {
@@ -120,8 +127,8 @@ resource "aws_iam_role_policy" "dynamodb_access" {
   })
 }
 
-resource "aws_iam_role_policy" "lambda_sqs" {
-  count = length(var.sqs_arns) # 0 if none passed
+resource "aws_iam_role_policy" "lambda_sqs_target" {
+  count = length(var.sqs_target_arns) # 0 if none passed
   role  = aws_iam_role.this.id
 
   policy = jsonencode({
@@ -130,20 +137,49 @@ resource "aws_iam_role_policy" "lambda_sqs" {
       {
         Effect   = "Allow",
         Action   = ["sqs:SendMessage"],
-        Resource = var.sqs_arns[count.index]
+        Resource = var.sqs_target_arns[count.index]
       }
     ]
   })
 }
 
 module "lambda_apigw" {
-  source = "../apigw"
-
+  source            = "../apigw"
+  count             = length(var.allowed_methods) > 0 ? 1 : 0
   allowed_methods   = var.allowed_methods
   function_name     = var.function_name
   lambda_invoke_arn = aws_lambda_function.this.invoke_arn
 }
 
 output "api_url" {
-  value = module.lambda_apigw.api_url
+  value = length(module.lambda_apigw) > 0 ? module.lambda_apigw[0].api_url : null
+}
+
+resource "aws_lambda_event_source_mapping" "from_sqs" {
+  count            = length(var.sqs_trigger_arns) # 0 if none passed
+  event_source_arn = var.sqs_trigger_arns[count.index]
+  function_name    = aws_lambda_function.this.arn # Lambda ARN
+  batch_size       = 1                            # Number of messages per invocation
+  enabled          = true
+}
+
+resource "aws_iam_role_policy" "lambda_sqs_event_source" {
+  count = length(var.sqs_trigger_arns) # 0 if none passed
+  role  = aws_iam_role.this.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl"
+        ]
+        Resource = var.sqs_trigger_arns[count.index]
+      }
+    ]
+  })
 }

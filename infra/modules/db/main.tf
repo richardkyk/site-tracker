@@ -21,8 +21,3 @@ output "arn" {
   value = aws_dynamodb_table.this.arn
 }
 
-output "env" {
-  value = {
-    DYNAMODB_TABLE = aws_dynamodb_table.this.name
-  }
-}

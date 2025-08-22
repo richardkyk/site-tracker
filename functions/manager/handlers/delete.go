@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"site-tracker/functions/scraper/clients"
+	"site-tracker/internal/clients/dynamodb"
 
 	"github.com/aws/aws-lambda-go/events"
 )
@@ -18,7 +18,7 @@ func HandleDelete(ctx context.Context, request events.APIGatewayV2HTTPRequest) (
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 400,
 			Body:       "invalid JSON: " + err.Error(),
-			Headers:    map[string]string{"Content-Type": "plain/text"},
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
 
@@ -27,21 +27,21 @@ func HandleDelete(ctx context.Context, request events.APIGatewayV2HTTPRequest) (
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 400,
 			Body:       "validation failed: " + err.Error(),
-			Headers:    map[string]string{"Content-Type": "plain/text"},
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
 
-	if err := clients.DeleteItem(ctx, body.Id); err != nil {
+	if err := dynamodb.DeleteItem(ctx, body.Id); err != nil {
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 500,
 			Body:       err.Error(),
-			Headers:    map[string]string{"Content-Type": "plain/text"},
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
 
 	return events.APIGatewayV2HTTPResponse{
 		StatusCode: 201,
 		Body:       "deleted: " + body.Id,
-		Headers:    map[string]string{"Content-Type": "plain/text"},
+		Headers:    map[string]string{"Content-Type": "text/plain"},
 	}, nil
 }

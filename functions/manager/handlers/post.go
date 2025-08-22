@@ -3,8 +3,8 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"site-tracker/functions/scraper/clients"
-	"site-tracker/functions/scraper/models"
+	"site-tracker/internal/clients/dynamodb"
+	"site-tracker/internal/models"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/google/uuid"
@@ -25,7 +25,7 @@ func HandlePost(ctx context.Context, request events.APIGatewayV2HTTPRequest) (ev
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 400,
 			Body:       "invalid JSON: " + err.Error(),
-			Headers:    map[string]string{"Content-Type": "plain/text"},
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
 
@@ -34,7 +34,7 @@ func HandlePost(ctx context.Context, request events.APIGatewayV2HTTPRequest) (ev
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 400,
 			Body:       "validation failed: " + err.Error(),
-			Headers:    map[string]string{"Content-Type": "plain/text"},
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
 
@@ -49,17 +49,17 @@ func HandlePost(ctx context.Context, request events.APIGatewayV2HTTPRequest) (ev
 		Email:       body.Email,
 		ShouldCheck: true,
 	}
-	if err := clients.PutItem(ctx, site); err != nil {
+	if err := dynamodb.PutItem(ctx, site); err != nil {
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 500,
 			Body:       err.Error(),
-			Headers:    map[string]string{"Content-Type": "plain/text"},
+			Headers:    map[string]string{"Content-Type": "text/plain"},
 		}, nil
 	}
 
 	return events.APIGatewayV2HTTPResponse{
 		StatusCode: 201,
 		Body:       id,
-		Headers:    map[string]string{"Content-Type": "plain/text"},
+		Headers:    map[string]string{"Content-Type": "text/plain"},
 	}, nil
 }

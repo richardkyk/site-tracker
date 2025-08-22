@@ -22,18 +22,23 @@ module "db" {
   app_name = local.app_name
 }
 
-module "queue" {
+module "task_queue" {
   source   = "./modules/queue"
-  app_name = local.app_name
+  app_name = "${local.app_name}-task"
 }
 
-module "scraper_lambda" {
+module "notify_queue" {
+  source   = "./modules/queue"
+  app_name = "${local.app_name}-notify"
+}
+
+module "manager_lambda" {
   source = "./modules/lambda"
 
-  function_name = "${local.app_name}-scraper"
-  filename      = "../build/scraper.zip"
-  dynamodb_arns = [module.db.arn]
-  sqs_arns      = [module.queue.arn]
+  function_name   = "${local.app_name}-manager"
+  filename        = "../build/manager.zip"
+  dynamodb_arns   = [module.db.arn]
+  sqs_target_arns = [module.task_queue.arn]
   allowed_methods = [
     "GET",
     "POST",
@@ -41,12 +46,50 @@ module "scraper_lambda" {
     "OPTIONS",
   ]
   environment_vars = merge(
-    module.db.env,
-    module.queue.env,
+    {
+      SQS_TASK_URL   = module.task_queue.id
+      DYNAMODB_TABLE = module.db.name
+    }
   )
 }
 
-output "scraper_api_url" {
-  description = "API Gateway URL for Scraper Lambda"
-  value       = module.scraper_lambda.api_url
+output "manager_api_url" {
+  description = "API Gateway URL for Manager Lambda"
+  value       = module.manager_lambda.api_url
+}
+
+module "cron_lambda" {
+  source = "./modules/lambda"
+
+  function_name   = "${local.app_name}-cron"
+  filename        = "../build/cron.zip"
+  dynamodb_arns   = [module.db.arn]
+  allowed_methods = ["GET"]
+  sqs_target_arns = [module.task_queue.arn]
+  environment_vars = merge(
+    {
+      SQS_TASK_URL   = module.task_queue.id
+      DYNAMODB_TABLE = module.db.name
+    }
+  )
+}
+
+output "cron_api_url" {
+  description = "API Gateway URL for Cron Lambda"
+  value       = module.cron_lambda.api_url
+}
+
+module "scraper_lambda" {
+  source = "./modules/lambda"
+
+  function_name    = "${local.app_name}-scraper"
+  filename         = "../build/scraper.zip"
+  dynamodb_arns    = [module.db.arn]
+  sqs_trigger_arns = [module.task_queue.arn]
+  environment_vars = merge(
+    {
+      SQS_NOTIFY_URL = module.notify_queue.id
+      DYNAMODB_TABLE = module.db.name
+    }
+  )
 }
