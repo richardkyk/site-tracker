@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"site-tracker/clients"
+	"site-tracker/functions/scraper/clients"
 	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"

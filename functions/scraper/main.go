@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"site-tracker/handlers"
+	"site-tracker/functions/scraper/handlers"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"

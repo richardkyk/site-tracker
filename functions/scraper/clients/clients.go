@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-
-	"site-tracker/models"
+	"site-tracker/functions/scraper/models"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"

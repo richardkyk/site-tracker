@@ -19,3 +19,5 @@ infra/*.tfplan
 # local_exec temp files (optional if you generate any)
 infra/*.log
 infra/tmp/
+
+build
