@@ -75,20 +75,11 @@ This will return the extracted value as a plain text response.
 To build this application, you can use the following command:
 
 ```bash
-docker buildx build --platform linux/arm64 --provenance=false -t lambda:site-tracker .
+make all
 ```
-This will build a minimal Docker image for the application using the AWS Lambda runtime.
+This will build all the Go binaries and create a zip file for deployment.
 
 ## Deployment
-### (Local)
-To deploy this application locally, you can use the following command:
-
-```bash
-docker run -p 9000:8080 --entrypoint /usr/local/bin/aws-lambda-rie lambda:site-tracker /var/task/bootstrap
-```
-
-This will start a local server that listens on port 9000 and serves the application.
-
 ### (AWS)
 To deploy this application to AWS, you can use the following command:
 
