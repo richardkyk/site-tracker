@@ -55,8 +55,12 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) (events.SQSEventResp
 					ItemIdentifier: record.MessageId,
 				})
 			}
-			sqsClient.SendMessage(ctx, string(payloadBytes))
-			dynamodb.UpdateItemShouldCheck(ctx, site.ID, false)
+			if err := sqsClient.SendMessage(ctx, string(payloadBytes)); err != nil {
+				log.Printf("failed to send message to SQS queue, %v", err)
+			}
+			if err := dynamodb.UpdateItemShouldCheck(ctx, site.ID, false); err != nil {
+				log.Printf("failed to update item, %v", err)
+			}
 		}
 	}
 

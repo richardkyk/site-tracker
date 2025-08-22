@@ -85,6 +85,7 @@ module "scraper_lambda" {
   function_name    = "${local.app_name}-scraper"
   filename         = "../build/scraper.zip"
   dynamodb_arns    = [module.db.arn]
+  sqs_target_arns  = [module.notify_queue.arn]
   sqs_trigger_arns = [module.task_queue.arn]
   environment_vars = merge(
     {

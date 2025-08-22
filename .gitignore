@@ -16,6 +16,8 @@ infra/.terraform.lock.hcl
 # Terraform plan files
 infra/*.tfplan
 
+infra/.terraform.tfstate.lock.info
+
 # local_exec temp files (optional if you generate any)
 infra/*.log
 infra/tmp/

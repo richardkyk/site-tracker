@@ -67,7 +67,7 @@ func handler(ctx context.Context) (events.APIGatewayV2HTTPResponse, error) {
 
 	return events.APIGatewayV2HTTPResponse{
 		StatusCode:      200,
-		Body:            fmt.Sprintf("Invoked %d Lambdas", successCount),
+		Body:            fmt.Sprintf("Checking %d sites", successCount),
 		IsBase64Encoded: false,
 		Headers:         map[string]string{"Content-Type": "text/plain; charset=utf-8"},
 	}, nil

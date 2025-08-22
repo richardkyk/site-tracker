@@ -159,8 +159,10 @@ resource "aws_lambda_event_source_mapping" "from_sqs" {
   count            = length(var.sqs_trigger_arns) # 0 if none passed
   event_source_arn = var.sqs_trigger_arns[count.index]
   function_name    = aws_lambda_function.this.arn # Lambda ARN
-  batch_size       = 1                            # Number of messages per invocation
+  batch_size       = 10                           # Number of messages per invocation
   enabled          = true
+
+  maximum_batching_window_in_seconds = 10
 }
 
 resource "aws_iam_role_policy" "lambda_sqs_event_source" {
