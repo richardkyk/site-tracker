@@ -31,6 +31,20 @@ variable "environment_vars" {
   default = {}
 }
 
+variable "dynamodb_arns" {
+  type    = list(string)
+  default = [] # <- default empty list
+}
+
+variable "sqs_arns" {
+  type    = list(string)
+  default = [] # <- default empty list
+}
+
+variable "allowed_methods" {
+  type    = list(string)
+  default = []
+}
 
 # IAM role for Lambda
 resource "aws_iam_role" "this" {
@@ -83,3 +97,53 @@ output "lambda_arn" {
   value = aws_lambda_function.this.arn
 }
 
+resource "aws_iam_role_policy" "dynamodb_access" {
+  count = length(var.dynamodb_arns) # 0 if none passed
+  role  = aws_iam_role.this.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan",
+          "dynamodb:Query"
+        ]
+        Resource = var.dynamodb_arns[count.index]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_sqs" {
+  count = length(var.sqs_arns) # 0 if none passed
+  role  = aws_iam_role.this.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = ["sqs:SendMessage"],
+        Resource = var.sqs_arns[count.index]
+      }
+    ]
+  })
+}
+
+module "lambda_apigw" {
+  source = "../apigw"
+
+  allowed_methods   = var.allowed_methods
+  function_name     = var.function_name
+  lambda_invoke_arn = aws_lambda_function.this.invoke_arn
+}
+
+output "api_url" {
+  value = module.lambda_apigw.api_url
+}

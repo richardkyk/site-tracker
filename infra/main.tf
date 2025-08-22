@@ -32,8 +32,21 @@ module "scraper_lambda" {
 
   function_name = "${local.app_name}-scraper"
   filename      = "../build/scraper.zip"
+  dynamodb_arns = [module.db.arn]
+  sqs_arns      = [module.queue.arn]
+  allowed_methods = [
+    "GET",
+    "POST",
+    "DELETE",
+    "OPTIONS",
+  ]
   environment_vars = merge(
     module.db.env,
     module.queue.env,
   )
+}
+
+output "scraper_api_url" {
+  description = "API Gateway URL for Scraper Lambda"
+  value       = module.scraper_lambda.api_url
 }

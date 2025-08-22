@@ -3,11 +3,16 @@ variable "function_name" {
 }
 
 variable "allowed_methods" {
-  type = list(string)
+  type    = list(string)
+  default = []
+}
+
+variable "lambda_invoke_arn" {
+  type = string
 }
 
 resource "aws_apigatewayv2_api" "http_api" {
-  name          = "${var.app_name}-http-api"
+  name          = "${var.function_name}-http-api"
   protocol_type = "HTTP"
 
   cors_configuration {
@@ -21,7 +26,7 @@ resource "aws_apigatewayv2_api" "http_api" {
 resource "aws_apigatewayv2_integration" "lambda_integration" {
   api_id                 = aws_apigatewayv2_api.http_api.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.lambda.invoke_arn
+  integration_uri        = var.lambda_invoke_arn
   integration_method     = "POST"
   payload_format_version = "2.0"
 }
@@ -29,7 +34,7 @@ resource "aws_apigatewayv2_integration" "lambda_integration" {
 resource "aws_lambda_permission" "api_gw_invoke" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.lambda.function_name
+  function_name = var.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
 }
@@ -65,7 +70,6 @@ resource "aws_apigatewayv2_stage" "default_stage" {
 output "api_url" {
   value = aws_apigatewayv2_stage.default_stage.invoke_url
 }
-
 
 resource "aws_cloudwatch_log_group" "http_api_logs" {
   name              = "/aws/http-api/${var.function_name}"

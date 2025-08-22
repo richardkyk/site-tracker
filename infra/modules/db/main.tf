@@ -2,7 +2,7 @@ variable "app_name" {
   type = string
 }
 
-resource "aws_dynamodb_table" "dynamodb_table" {
+resource "aws_dynamodb_table" "this" {
   name         = "${var.app_name}-table"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "id"
@@ -13,29 +13,16 @@ resource "aws_dynamodb_table" "dynamodb_table" {
   }
 }
 
-resource "aws_iam_role_policy" "lambda_dynamodb" {
-  role = aws_iam_role.lambda_exec.id
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:Scan",
-          "dynamodb:Query"
-        ],
-        Effect   = "Allow",
-        Resource = aws_dynamodb_table.dynamodb_table.arn
-      },
-    ]
-  })
+output "name" {
+  value = aws_dynamodb_table.this.name
+}
+
+output "arn" {
+  value = aws_dynamodb_table.this.arn
 }
 
 output "env" {
   value = {
-    DYNAMODB_TABLE = aws_dynamodb_table.dynamodb_table.name
+    DYNAMODB_TABLE = aws_dynamodb_table.this.name
   }
 }
