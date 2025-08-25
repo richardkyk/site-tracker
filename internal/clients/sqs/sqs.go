@@ -13,8 +13,8 @@ type SQSClientWrapper struct {
 	QueueURL string
 }
 
-// NewSQSClient returns a new SQS client for the given queue URL
-func NewSQSClient(queueURL string) (*SQSClientWrapper, error) {
+// NewClient returns a new SQS client for the given queue URL
+func NewClient(queueURL string) (*SQSClientWrapper, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return nil, fmt.Errorf("unable to load SDK config: %w", err)

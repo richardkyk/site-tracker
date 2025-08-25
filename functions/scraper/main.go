@@ -19,7 +19,7 @@ import (
 func handler(ctx context.Context, sqsEvent events.SQSEvent) (events.SQSEventResponse, error) {
 	response := events.SQSEventResponse{}
 
-	sqsClient, err := sqs.NewSQSClient(os.Getenv("SQS_NOTIFY_URL"))
+	sqsClient, err := sqs.NewClient(os.Getenv("SQS_NOTIFY_URL"))
 	if err != nil {
 		return response, err
 	}
@@ -33,19 +33,22 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) (events.SQSEventResp
 			continue // skip bad message
 		}
 
-		message := ""
+		message, status := "", ""
 		extractedValue, err := scraper.Scrape(site)
 		if err != nil {
 			message = fmt.Sprintf("failed to scrape: %s", err.Error())
+			status = "failed"
 		} else if extractedValue != site.Expected {
 			message = fmt.Sprintf(`value changed from %s to %s`, strconv.Quote(site.Expected), strconv.Quote(extractedValue))
+			status = "changed"
 		}
 
 		if message != "" {
-			payload := map[string]string{
-				"email":   site.Email,
-				"url":     site.URL,
-				"message": message,
+			payload := models.Email{
+				Email:   site.Email,
+				URL:     site.URL,
+				Message: message,
+				Status:  status,
 			}
 			payloadBytes, err := json.Marshal(payload)
 			if err != nil {

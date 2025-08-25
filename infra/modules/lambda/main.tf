@@ -53,6 +53,11 @@ variable "allowed_methods" {
   default = []
 }
 
+variable "ses_arns" {
+  type    = list(string)
+  default = [] # <- default empty list
+}
+
 # IAM role for Lambda
 resource "aws_iam_role" "this" {
   name = "${var.function_name}-role"
@@ -183,5 +188,19 @@ resource "aws_iam_role_policy" "lambda_sqs_event_source" {
         Resource = var.sqs_trigger_arns[count.index]
       }
     ]
+  })
+}
+
+resource "aws_iam_role_policy" "ses_send" {
+  count = length(var.ses_arns) # 0 if none passed
+  role  = aws_iam_role.this.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect   = "Allow",
+      Action   = ["ses:SendEmail", "ses:SendRawEmail"],
+      Resource = "*"
+    }]
   })
 }

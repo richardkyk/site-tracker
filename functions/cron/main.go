@@ -36,7 +36,7 @@ func handler(ctx context.Context) (events.APIGatewayV2HTTPResponse, error) {
 		}, nil
 	}
 
-	sqsClient, err := sqs.NewSQSClient(os.Getenv("SQS_TASK_URL"))
+	sqsClient, err := sqs.NewClient(os.Getenv("SQS_TASK_URL"))
 	if err != nil {
 		log.Printf("failed to create SQS client, %v", err)
 		return events.APIGatewayV2HTTPResponse{

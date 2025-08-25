@@ -8,6 +8,11 @@ terraform {
   required_version = ">= 1.12.0"
 }
 
+variable "custom_domain" {
+  description = "Custom domain to use for SES"
+  type        = string
+}
+
 locals {
   app_name   = "site-tracker"
   aws_region = "ap-southeast-2"
@@ -91,6 +96,24 @@ module "scraper_lambda" {
     {
       SQS_NOTIFY_URL = module.notify_queue.id
       DYNAMODB_TABLE = module.db.name
+    }
+  )
+}
+
+data "aws_ses_domain_identity" "example" {
+  domain = var.custom_domain
+}
+
+module "mailer_lambda" {
+  source = "./modules/lambda"
+
+  function_name    = "${local.app_name}-mailer"
+  filename         = "../build/mailer.zip"
+  sqs_trigger_arns = [module.notify_queue.arn]
+  ses_arns         = [data.aws_ses_domain_identity.example.arn]
+  environment_vars = merge(
+    {
+      SES_FROM_EMAIL = "no-reply@${data.aws_ses_domain_identity.example.domain}"
     }
   )
 }
