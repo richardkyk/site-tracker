@@ -42,6 +42,11 @@ variable "sqs_target_arns" {
   default     = [] # <- default empty list
 }
 
+variable "cron_triggers" {
+  type    = list(object({ arn = string, name = string }))
+  default = [] # <- default empty list
+}
+
 variable "sqs_trigger_arns" {
   type        = list(string)
   description = "List of SQS queue ARNs to allow triggering the Lambda"
@@ -203,4 +208,20 @@ resource "aws_iam_role_policy" "ses_send" {
       Resource = "*"
     }]
   })
+}
+
+resource "aws_cloudwatch_event_target" "cron_target" {
+  count = length(var.cron_triggers) # 0 if none passed
+  rule  = var.cron_triggers[count.index].name
+  arn   = aws_lambda_function.this.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge" {
+  count = length(var.cron_triggers) # 0 if none passed
+
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.this.arn
+  principal     = "events.amazonaws.com"
+  source_arn    = var.cron_triggers[count.index].arn
 }

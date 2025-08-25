@@ -63,6 +63,13 @@ output "manager_api_url" {
   value       = module.manager_lambda.api_url
 }
 
+module "cron_schedule" {
+  source = "./modules/cron"
+
+  name     = "${local.app_name}-schedule"
+  schedule = "cron(0 */4 * * ? *)"
+}
+
 module "cron_lambda" {
   source = "./modules/lambda"
 
@@ -71,6 +78,11 @@ module "cron_lambda" {
   dynamodb_arns   = [module.db.arn]
   allowed_methods = ["GET"]
   sqs_target_arns = [module.task_queue.arn]
+  cron_triggers = [
+    {
+      arn  = module.cron_schedule.arn
+      name = module.cron_schedule.name
+  }]
   environment_vars = merge(
     {
       SQS_TASK_URL   = module.task_queue.id
