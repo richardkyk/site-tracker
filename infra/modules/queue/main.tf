@@ -9,6 +9,8 @@ resource "aws_sqs_queue" "dlq" {
 resource "aws_sqs_queue" "this" {
   name = "${var.app_name}-queue"
 
+  receive_wait_time_seconds = 20
+
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.dlq.arn
     maxReceiveCount     = 3 # after 3 failed receives, message goes to DLQ
