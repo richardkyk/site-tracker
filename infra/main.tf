@@ -27,6 +27,11 @@ module "db" {
   app_name = local.app_name
 }
 
+module "storage" {
+  source = "./modules/storage"
+  name   = "${local.app_name}-storage"
+}
+
 module "task_queue" {
   source   = "./modules/queue"
   app_name = "${local.app_name}-task"
@@ -50,10 +55,12 @@ module "manager_lambda" {
     "DELETE",
     "OPTIONS",
   ]
+  s3_bucket_arns = [module.storage.arn]
   environment_vars = merge(
     {
       SQS_TASK_URL   = module.task_queue.id
       DYNAMODB_TABLE = module.db.name
+      S3_BUCKET      = module.storage.name
     }
   )
 }
@@ -104,10 +111,12 @@ module "scraper_lambda" {
   dynamodb_arns    = [module.db.arn]
   sqs_target_arns  = [module.notify_queue.arn]
   sqs_trigger_arns = [module.task_queue.arn]
+  s3_bucket_arns   = [module.storage.arn]
   environment_vars = merge(
     {
       SQS_NOTIFY_URL = module.notify_queue.id
       DYNAMODB_TABLE = module.db.name
+      S3_BUCKET      = module.storage.name
     }
   )
 }

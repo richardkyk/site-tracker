@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/google/uuid"
 )
 
 type GetRequestBody struct {
@@ -33,13 +34,14 @@ func HandleGet(ctx context.Context, request events.APIGatewayV2HTTPRequest) (eve
 	}
 
 	site := models.Site{
+		ID:       uuid.New().String(),
 		URL:      params.URL,
 		Selector: params.Selector,
 		Regex:    params.Regex,
 		Expected: params.Expected,
 	}
 
-	extractedValue, err := scraper.Scrape(site)
+	extractedValue, err := scraper.Scrape(ctx, site)
 	if err != nil {
 		return events.APIGatewayV2HTTPResponse{
 			StatusCode: 500,

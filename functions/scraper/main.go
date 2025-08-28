@@ -34,7 +34,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) (events.SQSEventResp
 		}
 
 		message, status := "", ""
-		extractedValue, err := scraper.Scrape(site)
+		extractedValue, err := scraper.Scrape(ctx, site)
 		if err != nil {
 			message = fmt.Sprintf("failed to scrape: %s", err.Error())
 			status = "failed"

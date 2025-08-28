@@ -53,6 +53,12 @@ variable "sqs_trigger_arns" {
   default     = [] # <- default empty list
 }
 
+variable "s3_bucket_arns" {
+  type        = list(string)
+  description = "List of S3 bucket ARNs to allow writing to"
+  default     = [] # <- default empty list
+}
+
 variable "allowed_methods" {
   type    = list(string)
   default = []
@@ -224,4 +230,27 @@ resource "aws_lambda_permission" "allow_eventbridge" {
   function_name = aws_lambda_function.this.arn
   principal     = "events.amazonaws.com"
   source_arn    = var.cron_triggers[count.index].arn
+}
+
+resource "aws_iam_role_policy" "lambda_s3_write" {
+  count = length(var.s3_bucket_arns) # 0 if none passed
+  role  = aws_iam_role.this.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = var.s3_bucket_arns[count.index]
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject"
+        ],
+        Resource = "${var.s3_bucket_arns[count.index]}/*"
+      }
+    ]
+  })
 }
